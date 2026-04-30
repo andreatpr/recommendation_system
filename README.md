@@ -1,4 +1,4 @@
-# Local Business Discovery Engine
+# City Discovery Engine
 Travel-oriented recommendation system using the Yelp Academic Dataset.
 
 ## Project Structure

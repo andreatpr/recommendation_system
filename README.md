@@ -13,7 +13,7 @@ notebooks/
 &nbsp;&nbsp;week5.ipynb     ← feature engineering/PCA (Week 5)              
 &nbsp;&nbsp;week7.ipynb     ← KMeans - DBScan (Week 7)      
 &nbsp;&nbsp;w10.ipynb     ← Hybrid recommendation model (Week 11)         
-&nbsp;&nbsp;w12.ipynb     ← Graph Analytics and Centrality (Week 13)  
+&nbsp;&nbsp;week12.ipynb     ← Graph Analytics and Centrality (Week 13)  
 reports/  
 &nbsp;&nbsp;Week3 assignment report         
 &nbsp;&nbsp;Week5 assignment report   

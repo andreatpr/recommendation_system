@@ -13,6 +13,7 @@ notebooks/
 &nbsp;&nbsp;week5.ipynb     ← feature engineering/PCA (Week 5)              
 &nbsp;&nbsp;week7.ipynb     ← KMeans - DBScan (Week 7)      
 &nbsp;&nbsp;w10.ipynb     ← Hybrid recommendation model (Week 11)         
+&nbsp;&nbsp;w12.ipynb     ← Graph Analytics and Centrality (Week 13)  
 reports/  
 &nbsp;&nbsp;Week3 assignment report         
 &nbsp;&nbsp;Week5 assignment report   
@@ -57,9 +58,9 @@ data/processed/city_features.parquet        (1416 rows, 162 cols)
 | W3   | Dataset Charter + V1     | Complete    |
 | W5   | Feature Engineering      | Complete    |
 | W7   | Clustering               | Complete    |
-| W10  | Recommendation Engine    | Pending     |
-| W12  | Graph Analytics          | Pending     |
-| W14  | Final Delivery           | Pending     |
+| W11  | Recommendation Engine    | Complete    |
+| W13  | Graph Analytics          | Complete    |
+| W15  | Final Delivery           | Pending     |
 
 ## Team
 - [Maria Ximena Chavarria Barrios & Andrea Katherina Tapia Pescoran] — Data Engineering Lead

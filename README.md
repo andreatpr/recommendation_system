@@ -19,6 +19,7 @@ reports/
 &nbsp;&nbsp;Week5 assignment report   
 &nbsp;&nbsp;Week7 assignment report   
 &nbsp;&nbsp;Week11 assignment report   
+&nbsp;&nbsp;Week13 assignment report
 README.md  
 
 ## Dataset

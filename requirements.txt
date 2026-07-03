@@ -1,0 +1,14 @@
+numpy>=2.0
+pandas>=2.0
+scikit-learn>=1.5
+scipy>=1.13
+matplotlib>=3.8
+seaborn>=0.13
+networkx>=3.3
+plotly>=5.20
+pyarrow>=17.0
+joblib>=1.4
+kneed>=0.8
+requests>=2.31
+jupyter
+notebook

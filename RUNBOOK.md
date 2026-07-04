@@ -30,6 +30,13 @@ recommendation_system/
 ```
 
 ---
+## Clone repository
+
+```bash
+git clone https://github.com/andreatpr/recommendation_system.git
+
+cd recommendation_system
+```
 
 # 2. Requirements
 

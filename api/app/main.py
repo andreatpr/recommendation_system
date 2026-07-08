@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from .model_loader import load_model_state
 from .routers import cities, health, model_info, recommendations, users
@@ -29,6 +30,11 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/docs")
+
 
 app.include_router(health.router)
 app.include_router(model_info.router)

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+api/data/
+api/.venv/
+web/node_modules/
+web/.next/
+web/out/
+web/*.tsbuildinfo

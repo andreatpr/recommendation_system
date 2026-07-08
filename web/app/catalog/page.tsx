@@ -10,8 +10,26 @@ export default async function CatalogPage({
   searchParams: Promise<{ cluster?: string }>;
 }) {
   const { cluster: clusterParam } = await searchParams;
-  const cluster = clusterParam !== undefined ? Number(clusterParam) : undefined;
-  const { total, cities } = await getCities(cluster);
+  const cluster =
+    clusterParam !== undefined && /^\d+$/.test(clusterParam) ? Number(clusterParam) : undefined;
+
+  let total: number;
+  let cities: Awaited<ReturnType<typeof getCities>>["cities"];
+  try {
+    ({ total, cities } = await getCities(cluster));
+  } catch {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-12">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          Catálogo de ciudades
+        </h1>
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          No se pudo cargar el catálogo: la API no está disponible. Verifica que el backend esté
+          corriendo e intenta de nuevo.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-12">

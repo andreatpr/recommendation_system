@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements-api.txt
 
 COPY api/app/ ./app/
 COPY api/tests/ ./tests/
+COPY api/pyproject.toml .
 COPY data/processed/models/hybrid_artifacts.pkl ./data/models/hybrid_artifacts.pkl
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \

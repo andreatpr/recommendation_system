@@ -66,9 +66,34 @@ docker compose up --build
 - API + Swagger: http://localhost:8000/docs
 - Web app: http://localhost:3000
 
-See `api/README.md` and `web/` for endpoint details. Unknown users automatically fall back to a
+See `api/README.md` and `web/README.md` for details. Unknown users automatically fall back to a
 popularity-based ranking (cold-start handling) — this is visible both via `/recommendations/{user_id}`
 and in the web UI.
+
+### How to test the MVP
+
+1. **Start everything**: `docker compose up --build` (first build takes a few minutes). Wait until
+   both services are healthy.
+2. **Swagger** (http://localhost:8000/docs):
+   - `GET /users/sample` → copy one of the returned `user_ids`.
+   - `GET /recommendations/{user_id}` with that id → `method: "hybrid"`, `is_cold_start: false`,
+     top-10 cities with scores.
+   - `GET /recommendations/{user_id}` with any made-up id (e.g. `test-123`) →
+     `method: "popularity"`, `is_cold_start: true` (cold-start fallback).
+   - `GET /model-info` → hybrid weights, reported metrics (Recall@4: 12.8% baseline → 52.1% hybrid)
+     and `data_quality` flags.
+3. **Web UI** (http://localhost:3000): pick a sample user → "Descubrir ciudades" → compare the
+   hybrid vs popularity columns. Type a made-up user id to see the cold-start banner. Browse
+   `/catalog` and filter by cluster.
+4. **Automated tests**:
+
+   ```
+   cd api
+   pip install -r requirements-api.txt
+   pytest        # expected: 12 passed
+   ```
+
+   Or inside Docker: `docker compose run --rm api pytest`.
 
 ## Team
 - [Maria Ximena Chavarria Barrios & Andrea Katherina Tapia Pescoran] — Data Engineering Lead

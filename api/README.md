@@ -15,8 +15,25 @@ Swagger UI: http://localhost:8000/docs
 
 ## Run tests
 
+From the `api/` directory (the suite auto-detects the model at
+`../data/processed/models/hybrid_artifacts.pkl` when `MODEL_PATH` is not set):
+
 ```
+cd api
+pip install -r requirements-api.txt   # if not already installed
 pytest
+```
+
+Expected: `12 passed`. To point the tests at a different artifact:
+
+```
+MODEL_PATH=/path/to/hybrid_artifacts.pkl pytest
+```
+
+Inside the Docker image (model is baked in at `/srv/data/models/`):
+
+```
+docker compose run --rm api pytest
 ```
 
 ## Endpoints

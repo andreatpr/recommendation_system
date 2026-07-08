@@ -1,7 +1,5 @@
 .git/
 data/raw/
-data/processed/*.parquet
-data/processed/w11/
 notebooks/
 reports/
 api/data/

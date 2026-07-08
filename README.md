@@ -70,7 +70,7 @@ Next.js frontend (`web/`) to try recommendations interactively.
 docker compose up --build
 ```
 
-- Web app: http://localhost:3000
+- Web app: http://localhost:3100
 - API + Swagger: http://localhost:8000/docs
 
 See `api/README.md` and `web/README.md` for endpoint/component details.
@@ -96,7 +96,7 @@ fallback: the API automatically returns a popularity-based ranking (`method: "po
 
 1. **Start everything**: `docker compose up --build` (first build takes a few minutes). Wait
    until both services are healthy.
-2. **Web UI** (http://localhost:3000):
+2. **Web UI** (http://localhost:3100):
    - "Tus gustos": search and pick 3-5 cities (autocomplete over the 213-city catalog), rate
      each with stars, press "Ver mis recomendaciones". Compare the personalized column against
      the popularity baseline.

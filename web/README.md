@@ -15,6 +15,8 @@ enriched city cards.
 
 In `docker-compose.yml` these are already wired: the browser hits the API published on the host
 (`http://localhost:8000`), while server components use the internal hostname (`http://api:8000`).
+The compose setup publishes the web app on host port **3100** (http://localhost:3100), since
+3000 tends to collide with other local projects; `npm run dev` still uses 3000.
 
 ## Run in development
 

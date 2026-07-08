@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-City Discovery Engine — travel-oriented recommendation system built on the Yelp Academic Dataset. Academic project (course milestones W3–W15). Training/analysis logic lives in Jupyter notebooks; the Week 15 MVP adds a serving layer: `api/` (FastAPI, serves the pickled model with Swagger at `/docs`) and `web/` (Next.js UI), both run via `docker compose up --build` (API on :8000, web on :3000).
+City Discovery Engine — travel-oriented recommendation system built on the Yelp Academic Dataset. Academic project (course milestones W3–W15). Training/analysis logic lives in Jupyter notebooks; the Week 15 MVP adds a serving layer: `api/` (FastAPI, serves the pickled model with Swagger at `/docs`) and `web/` (Next.js UI), both run via `docker compose up --build` (API on :8000, web on host :3100 — 3000 collides with other local projects).
 
 ## Setup
 

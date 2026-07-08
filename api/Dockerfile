@@ -9,6 +9,7 @@ COPY api/app/ ./app/
 COPY api/tests/ ./tests/
 COPY api/pyproject.toml .
 COPY data/processed/models/hybrid_artifacts.pkl ./data/models/hybrid_artifacts.pkl
+COPY data/processed/w11/ ./data/w11/
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1

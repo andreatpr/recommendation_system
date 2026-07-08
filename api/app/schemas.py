@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field
 
 class HealthResponse(BaseModel):
     status: str
@@ -64,3 +63,29 @@ class CityListResponse(BaseModel):
 
 class SampleUsersResponse(BaseModel):
     user_ids: list[str]
+
+
+class NewUserRating(BaseModel):
+    city: str
+    rating: float = Field(ge=1.0, le=5.0)
+
+
+class NewUserRecommendationRequest(BaseModel):
+    ratings: list[NewUserRating]
+    k: int = Field(default=10, ge=1, le=50)
+
+
+class NewUserRecommendationItem(BaseModel):
+    city: str
+    score: float
+    content_score: float
+    popularity_score: float
+    cluster: int | None = None
+
+
+class NewUserRecommendationResponse(BaseModel):
+    method: str
+    is_cold_start: bool
+    input_cities: list[str]
+    ignored_cities: list[str]
+    recommendations: list[NewUserRecommendationItem]

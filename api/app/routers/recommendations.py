@@ -3,7 +3,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, Request
 
 from .. import recommender
-from ..schemas import CityScore, RecommendationResponse
+from ..schemas import (
+    CityScore,
+    RecommendationResponse,
+    NewUserRecommendationRequest,
+    NewUserRecommendationResponse,
+)
 
 router = APIRouter(prefix="/recommendations")
 
@@ -58,4 +63,36 @@ def get_recommendations(
         method="popularity",
         is_cold_start=True,
         recommendations=_to_city_scores(state, fallback),
+    )
+
+@router.post(
+    "/new-user",
+    response_model=NewUserRecommendationResponse,
+)
+def get_new_user_recommendations(
+    request: Request,
+    body: NewUserRecommendationRequest,
+) -> NewUserRecommendationResponse:
+
+    state = request.app.state.model
+
+    ratings = [
+        (item.city, item.rating)
+        for item in body.ratings
+    ]
+
+    recommendations, input_cities, ignored_cities = (
+        recommender.recommend_new_user(
+            state,
+            ratings,
+            k=body.k,
+        )
+    )
+
+    return NewUserRecommendationResponse(
+        method="content-popularity",
+        is_cold_start=True,
+        input_cities=input_cities,
+        ignored_cities=ignored_cities,
+        recommendations=recommendations,
     )

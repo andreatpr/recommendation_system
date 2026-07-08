@@ -18,8 +18,8 @@ def get_model_info(request: Request) -> ModelInfoResponse:
         hybrid_config=state.hybrid_config,
         metrics=REPORTED_METRICS,
         data_quality={
-            "cluster_popularity_source": "approximate",
-            "seen_exclusion_available": False,
+            "cluster_popularity_source": "w10_user_city_f.parquet",
+            "seen_exclusion_available": True,
             "cities_filtered_count": len(state.cities_filtered),
             "cities_scored_count": len(state.content_city_to_idx),
         },

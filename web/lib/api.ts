@@ -1,9 +1,3 @@
-// Client components (browser) always use NEXT_PUBLIC_API_URL, which must point to
-// wherever the browser can reach the API (e.g. http://localhost:8000, the port
-// published on the host). Server components run inside the Next.js container/process
-// itself, so in docker-compose they need the internal service hostname instead
-// (API_URL=http://api:8000) -- falling back to NEXT_PUBLIC_API_URL for local `next dev`
-// where both resolve to the same place.
 const API_URL =
   typeof window === "undefined"
     ? process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
@@ -135,4 +129,51 @@ export function getPopularity(k = 10): Promise<RecommendationResponse> {
 
 export function getCities(cluster?: number): Promise<CityListResponse> {
   return getJson<CityListResponse>(`/cities${buildQuery({ cluster })}`);
+}
+
+export type NewUserRating = {
+  city: string;
+  rating: number;
+};
+
+export type NewUserRecommendationItem = {
+  city: string;
+  score: number;
+  content_score: number;
+  popularity_score: number;
+  cluster: number | null;
+};
+
+export type NewUserRecommendationResponse = {
+  method: string;
+  is_cold_start: boolean;
+  input_cities: string[];
+  ignored_cities: string[];
+  recommendations: NewUserRecommendationItem[];
+};
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new ApiError(`La API respondió ${res.status} para ${path}`);
+  }
+
+  return res.json();
+}
+
+export function getNewUserRecommendations(
+  ratings: NewUserRating[],
+  k = 10
+): Promise<NewUserRecommendationResponse> {
+  return postJson<NewUserRecommendationResponse>("/recommendations/new-user", {
+    ratings,
+    k,
+  });
 }

@@ -16,6 +16,25 @@ DEFAULT_MODEL_PATH = Path(
     )
 )
 
+DEFAULT_TRAIN_UC_PATH = Path(
+    os.environ.get(
+        "TRAIN_UC_PATH",
+        Path(__file__).resolve().parent.parent
+        / "data"
+        / "w11"
+        / "w10_train_uc.parquet",
+    )
+)
+
+DEFAULT_USER_CITY_F_PATH = Path(
+    os.environ.get(
+        "USER_CITY_F_PATH",
+        Path(__file__).resolve().parent.parent
+        / "data"
+        / "w11"
+        / "w10_user_city_f.parquet",
+    )
+)
 
 @dataclass
 class ModelState:
@@ -32,6 +51,7 @@ class ModelState:
     city_popularity: pd.DataFrame
     cities_filtered: pd.DataFrame
     hybrid_config: dict[str, float]
+    seen_cities: dict[str, set[str]] = field(default_factory=dict)
 
     city_cluster_map: dict[str, int] = field(default_factory=dict)
     cluster_popularity: dict[int, dict[str, float]] = field(default_factory=dict)
@@ -63,12 +83,25 @@ def load_model_state(path: Path = DEFAULT_MODEL_PATH) -> ModelState:
         cities_filtered=artifacts["cities_filtered"],
         hybrid_config=artifacts["hybrid_config"],
     )
+    train_uc = pd.read_parquet(DEFAULT_TRAIN_UC_PATH)
+
+    seen_cities = (
+        train_uc
+        .groupby("user_id")["city_clean"]
+        .apply(set)
+        .to_dict()
+    )
+    state.seen_cities = seen_cities
 
     state.city_cluster_map = dict(
         zip(state.cities_filtered["city_clean"], state.cities_filtered["cluster"])
     )
+
+    user_city_f = pd.read_parquet(DEFAULT_USER_CITY_F_PATH)
+
     state.cluster_popularity = _derive_cluster_popularity(
-        state.city_popularity, state.city_cluster_map
+        user_city_f,
+        state.city_cluster_map
     )
     state.cf_min, state.cf_max = _derive_cf_bounds(state.user_factors, state.item_factors)
 
@@ -76,27 +109,55 @@ def load_model_state(path: Path = DEFAULT_MODEL_PATH) -> ModelState:
 
 
 def _derive_cluster_popularity(
-    city_popularity: pd.DataFrame, city_cluster_map: dict[str, int]
+    user_city_f: pd.DataFrame,
+    city_cluster_map: dict[str, int],
 ) -> dict[int, dict[str, float]]:
-    """Approximate cluster-level popularity.
-
-    w10.ipynb (cell 46) computes this from user_city_f (avg_rating * log1p(n_users),
-    min-max normalized per cluster), but that parquet is an unresolved Git LFS
-    pointer in this repo. This derives the same per-cluster min-max normalization
-    from city_popularity['baseline_score'] (available in the pickle) instead --
-    an approximation, not the exact notebook value. Exposed honestly via
-    /model-info.data_quality.cluster_popularity_source.
     """
-    df = city_popularity[["city_clean", "baseline_score"]].copy()
+    Reconstruct cluster-level popularity exactly as implemented in
+    notebooks/w10.ipynb (cell 46).
+
+    For each cluster:
+      1. Aggregate user-city interactions.
+      2. Compute popularity = avg_rating * log1p(n_users).
+      3. Min-max normalize popularity within the cluster.
+    """
+
+    df = user_city_f.copy()
+
+    # Recreate the cluster labels used in the notebook
     df["cluster"] = df["city_clean"].map(city_cluster_map)
 
     cluster_popularity: dict[int, dict[str, float]] = {}
-    for cluster_id, group in df.groupby("cluster"):
-        lo, hi = group["baseline_score"].min(), group["baseline_score"].max()
-        normalized = (group["baseline_score"] - lo) / (hi - lo + 1e-9)
-        cluster_popularity[cluster_id] = dict(zip(group["city_clean"], normalized))
-    return cluster_popularity
 
+    for cluster_id, g in df.groupby("cluster"):
+
+        stats = (
+            g.groupby("city_clean")
+            .agg(
+                avg_rating=("rating", "mean"),
+                n_users=("user_id", "nunique"),
+            )
+        )
+
+        stats["popularity_score"] = (
+            stats["avg_rating"]
+            * np.log1p(stats["n_users"])
+        )
+
+        stats["popularity_score"] = (
+            stats["popularity_score"]
+            - stats["popularity_score"].min()
+        ) / (
+            stats["popularity_score"].max()
+            - stats["popularity_score"].min()
+            + 1e-9
+        )
+
+        cluster_popularity[cluster_id] = (
+            stats["popularity_score"].to_dict()
+        )
+
+    return cluster_popularity
 
 def _derive_cf_bounds(user_factors: np.ndarray, item_factors: np.ndarray) -> tuple[float, float]:
     """cf_min/cf_max over the full population (213 cities x n_users).

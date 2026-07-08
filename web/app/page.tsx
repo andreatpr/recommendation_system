@@ -12,6 +12,7 @@ import { UserPicker } from "@/components/UserPicker";
 import { WeightControls } from "@/components/WeightControls";
 import { RecommendationComparison } from "@/components/RecommendationComparison";
 import { ModelInfoBanner } from "@/components/ModelInfoBanner";
+import { NewUserPicker } from "@/components/NewUserPicker";
 
 const DEFAULT_WEIGHTS = { w_content: 0.05, w_pop: 0.1, w_cf: 0.85, k: 10 };
 
@@ -58,6 +59,10 @@ export default function Home() {
       <section className="flex flex-col gap-4 rounded-xl border border-black/10 bg-white p-6 dark:border-white/10 dark:bg-zinc-900">
         <UserPicker onSubmit={handleSearch} loading={loading} />
         <WeightControls defaults={DEFAULT_WEIGHTS} value={weights} onChange={setWeights} />
+      </section>
+
+      <section className="flex flex-col gap-4 rounded-xl border border-black/10 bg-white p-6 dark:border-white/10 dark:bg-zinc-900">
+        <NewUserPicker />
       </section>
 
       {error && (

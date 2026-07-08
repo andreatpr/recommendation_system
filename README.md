@@ -52,7 +52,23 @@ Detailed on RUNBOOK.md
 | W7   | Clustering               | Complete    |
 | W11  | Recommendation Engine    | Complete    |
 | W13  | Graph Analytics          | Complete    |
-| W15  | Final Delivery           | Pending     |
+| W15  | Final Delivery           | Complete    |
+
+## Week 15 — Final Delivery (MVP)
+
+The hybrid model trained in `notebooks/w10.ipynb` (`data/processed/models/hybrid_artifacts.pkl`) is served
+through a FastAPI backend (`api/`) with Swagger docs, and a Next.js frontend (`web/`) to try it interactively.
+
+```
+docker compose up --build
+```
+
+- API + Swagger: http://localhost:8000/docs
+- Web app: http://localhost:3000
+
+See `api/README.md` and `web/` for endpoint details. Unknown users automatically fall back to a
+popularity-based ranking (cold-start handling) — this is visible both via `/recommendations/{user_id}`
+and in the web UI.
 
 ## Team
 - [Maria Ximena Chavarria Barrios & Andrea Katherina Tapia Pescoran] — Data Engineering Lead

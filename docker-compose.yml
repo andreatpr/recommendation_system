@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    environment:
+      # Browser-side fetches (client components) hit the API published on the host.
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Server-side fetches (server components, e.g. /catalog) run inside this
+      # container, so they must use the internal compose network hostname.
+      API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy

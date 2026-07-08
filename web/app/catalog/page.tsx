@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getCities } from "@/lib/api";
+import { CityInfo, getCities } from "@/lib/api";
 import { clusterGradient, clusterLabel } from "@/lib/clusterStyle";
-
-const CLUSTERS = [0, 1, 2, 3];
+import { formatCount } from "@/lib/format";
+import { Badge } from "@/components/CityCard";
+import StarRating from "@/components/StarRating";
 
 export default async function CatalogPage({
   searchParams,
@@ -13,10 +14,9 @@ export default async function CatalogPage({
   const cluster =
     clusterParam !== undefined && /^\d+$/.test(clusterParam) ? Number(clusterParam) : undefined;
 
-  let total: number;
-  let cities: Awaited<ReturnType<typeof getCities>>["cities"];
+  let allCities: CityInfo[];
   try {
-    ({ total, cities } = await getCities(cluster));
+    ({ cities: allCities } = await getCities());
   } catch {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-12">
@@ -31,34 +31,51 @@ export default async function CatalogPage({
     );
   }
 
+  const clusters = [...new Set(allCities.map((c) => c.cluster))].sort((a, b) => a - b);
+  const cities = cluster !== undefined ? allCities.filter((c) => c.cluster === cluster) : allCities;
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-12">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
           Catálogo de ciudades
         </h1>
-        <p className="text-zinc-600 dark:text-zinc-400">{total} ciudades en el catálogo.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">{cities.length} ciudades en el catálogo.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <FilterLink cluster={undefined} active={cluster === undefined} />
-        {CLUSTERS.map((c) => (
+        {clusters.map((c) => (
           <FilterLink key={c} cluster={c} active={cluster === c} />
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
         {cities.map((c) => (
           <div
             key={c.city}
-            className="overflow-hidden rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-zinc-900"
+            className="overflow-hidden rounded-lg border border-black/10 bg-white transition-shadow hover:shadow-md dark:border-white/10 dark:bg-zinc-900"
           >
             <div className={`h-10 bg-gradient-to-br ${clusterGradient(c.cluster)}`} />
             <div className="p-3">
-              <p className="truncate font-medium capitalize text-zinc-900 dark:text-zinc-50">
-                {c.city}
-              </p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate font-medium capitalize text-zinc-900 dark:text-zinc-50">
+                  {c.city}
+                </p>
+                <Badge badge={c.badge} />
+              </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">{clusterLabel(c.cluster)}</p>
+              {c.avg_rating !== null && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-300">
+                  <StarRating value={c.avg_rating} readOnly size="sm" />
+                  <span className="font-medium">{c.avg_rating.toFixed(1)}</span>
+                  {c.reviewers !== null && (
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      · {formatCount(c.reviewers)} reseñas
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -74,10 +91,10 @@ function FilterLink({ cluster, active }: { cluster: number | undefined; active: 
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1 text-sm ${
+      className={`rounded-full px-3 py-1 text-sm transition-colors ${
         active
           ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
-          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+          : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
       }`}
     >
       {label}

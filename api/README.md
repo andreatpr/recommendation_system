@@ -43,9 +43,33 @@ docker compose run --rm api pytest
 | GET    | `/health`                     | Liveness + whether the model is loaded                     |
 | GET    | `/model-info`                 | Model shape, hybrid weights, reported metrics, data quality |
 | GET    | `/recommendations/{user_id}`  | Hybrid recommendations; falls back to popularity for unknown users (cold-start) |
+| POST   | `/recommendations/preferences`| Personalized recommendations for a new user from a list of (city, rating) preferences |
 | GET    | `/recommendations/popularity` | Pure popularity baseline                                    |
 | GET    | `/cities`                     | City catalog, optionally filtered by `cluster`              |
 | GET    | `/users/sample`               | Sample of known user_ids, useful for trying the API          |
+
+City objects in `/cities` and in recommendation responses include enrichment fields derived
+from the pickle at startup: `avg_rating`, `reviewers`, `popularity` (0-1, globally normalized
+baseline score) and `badge` (`"popular"` = top-quartile reviewer count; `"hidden_gem"` =
+top-quartile rating with bottom-quartile reviewers; otherwise `null`).
+
+### POST /recommendations/preferences
+
+Cold-start-by-design: builds a content profile as the weighted average of the rated cities'
+PCA embeddings (weights = `rating * log1p(n_reviews)`, mirroring the w10.ipynb cold-start
+demo) and scores candidates with `0.7 * cosine + 0.3 * popularity`. No CF term — a new user
+has no latent factors. Rated cities are excluded from the results. Unknown city names return
+422 listing the invalid names; city matching is case-insensitive. Note: this path is POST-only;
+a GET to the same URL matches `/recommendations/{user_id}` and returns the cold-start fallback.
+
+```bash
+curl -X POST http://localhost:8000/recommendations/preferences \
+  -H 'Content-Type: application/json' \
+  -d '{"preferences":[{"city":"west chester","rating":5},{"city":"exton","rating":4}],"k":10}'
+```
+
+(Valid city names come from `GET /cities` — the catalog covers the metro areas present in the
+filtered Yelp dataset, e.g. `west chester`, `exton`, `st petersburg`; `tampa` is not in it.)
 
 ## Known limitations (see `/model-info.data_quality`)
 

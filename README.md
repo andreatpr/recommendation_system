@@ -74,23 +74,29 @@ and in the web UI.
 
 1. **Start everything**: `docker compose up --build` (first build takes a few minutes). Wait until
    both services are healthy.
-2. **Swagger** (http://localhost:8000/docs):
-   - `GET /users/sample` → copy one of the returned `user_ids`.
-   - `GET /recommendations/{user_id}` with that id → `method: "hybrid"`, `is_cold_start: false`,
-     top-10 cities with scores.
-   - `GET /recommendations/{user_id}` with any made-up id (e.g. `test-123`) →
-     `method: "popularity"`, `is_cold_start: true` (cold-start fallback).
+2. **Web UI** (http://localhost:3000), main flow — "Tus gustos":
+   - Search and pick 3-5 cities you know (autocomplete over the 213-city catalog), rate each
+     with stars, press "Ver mis recomendaciones".
+   - Compare the personalized column ("Según tus gustos") against the popularity baseline.
+   - Switch to "Modo demo académico" to test the full hybrid model with real dataset users
+     (pick a sample user, or type a made-up id to see the cold-start fallback banner).
+   - Browse `/catalog`: enriched city cards (avg rating, reviewer counts, "Popular" /
+     "Joya oculta" badges) filterable by cluster.
+3. **Swagger** (http://localhost:8000/docs):
+   - `POST /recommendations/preferences` with e.g.
+     `{"preferences":[{"city":"west chester","rating":5}],"k":10}` → `method: "preferences"`
+     (valid names come from `GET /cities`).
+   - `GET /users/sample` → copy an id → `GET /recommendations/{user_id}` → `method: "hybrid"`.
+   - Same endpoint with a made-up id (e.g. `test-123`) → `method: "popularity"`,
+     `is_cold_start: true` (cold-start fallback).
    - `GET /model-info` → hybrid weights, reported metrics (Recall@4: 12.8% baseline → 52.1% hybrid)
      and `data_quality` flags.
-3. **Web UI** (http://localhost:3000): pick a sample user → "Descubrir ciudades" → compare the
-   hybrid vs popularity columns. Type a made-up user id to see the cold-start banner. Browse
-   `/catalog` and filter by cluster.
 4. **Automated tests**:
 
    ```
    cd api
    pip install -r requirements-api.txt
-   pytest        # expected: 12 passed
+   pytest        # expected: 25 passed
    ```
 
    Or inside Docker: `docker compose run --rm api pytest`.

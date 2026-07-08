@@ -60,6 +60,49 @@ def recommend_hybrid(
     return scored[:k]
 
 
+def recommend_from_preferences(
+    state: ModelState,
+    preferences: list[tuple[str, float]],
+    k: int = 10,
+    w_content: float = 0.7,
+    w_pop: float = 0.3,
+) -> list[tuple[str, float]]:
+    """Content + popularity recommendations for a brand-new user, from a list of
+    (city, rating 1-5) preferences. Mirrors the w10.ipynb cold-start demo
+    (cells ~1644-1673): profile = weighted average of the rated cities' content
+    embeddings, weights = rating * log1p(n_reviews). No CF term -- a new user has
+    no latent factors. Popularity is the globally normalized baseline_score
+    (city_stats), sharing one scale with the cross-cluster cosine score.
+
+    Cities must be pre-validated against content_city_to_idx (the router owns
+    422s). Duplicate cities keep the last occurrence. Rated cities are excluded
+    from the results.
+    """
+    prefs = dict(preferences)
+
+    sel_idx = [state.content_city_to_idx[c] for c in prefs]
+    ratings = np.array(list(prefs.values()), dtype=float)
+    n_reviews = np.array([state.city_stats[c]["reviews"] for c in prefs], dtype=float)
+
+    weights = ratings * np.log1p(n_reviews)
+    weights = weights / (weights.sum() + 1e-9)
+    profile = np.average(state.X_content[sel_idx], axis=0, weights=weights)
+
+    candidates = [c for c in state.content_city_to_idx if c not in prefs]
+    candidate_idx = [state.content_city_to_idx[c] for c in candidates]
+    content_scores = cosine_similarity(
+        profile.reshape(1, -1), state.X_content[candidate_idx]
+    ).flatten()
+
+    scored: list[tuple[str, float]] = []
+    for city, content_s in zip(candidates, content_scores):
+        pop_s = state.city_stats.get(city, {}).get("popularity", 0.0)
+        scored.append((city, float(w_content * content_s + w_pop * pop_s)))
+
+    scored.sort(key=lambda pair: pair[1], reverse=True)
+    return scored[:k]
+
+
 def recommend_popularity(state: ModelState, k: int = 10) -> list[tuple[str, float]]:
     """Reimplements w10.ipynb recommend_popularity (cell 41), ranking by
     baseline_score. Seen-city exclusion isn't available (see recommend_hybrid)."""

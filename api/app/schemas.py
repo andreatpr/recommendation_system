@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -43,6 +45,10 @@ class CityScore(BaseModel):
     city: str
     score: float
     cluster: int
+    avg_rating: float | None = None
+    reviewers: int | None = None
+    popularity: float | None = None
+    badge: Literal["popular", "hidden_gem"] | None = None
 
 
 class RecommendationResponse(BaseModel):
@@ -52,9 +58,25 @@ class RecommendationResponse(BaseModel):
     recommendations: list[CityScore]
 
 
+class PreferenceItem(BaseModel):
+    city: str
+    rating: float = Field(ge=1, le=5)
+
+
+class PreferencesRequest(BaseModel):
+    preferences: list[PreferenceItem] = Field(min_length=1, max_length=20)
+    k: int = Field(10, ge=1, le=213)
+    w_content: float | None = Field(None, ge=0, le=1)
+    w_pop: float | None = Field(None, ge=0, le=1)
+
+
 class CityInfo(BaseModel):
     city: str
     cluster: int
+    avg_rating: float | None = None
+    reviewers: int | None = None
+    popularity: float | None = None
+    badge: Literal["popular", "hidden_gem"] | None = None
 
 
 class CityListResponse(BaseModel):

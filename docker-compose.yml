@@ -18,7 +18,9 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
-      - "3000:3000"
+      # Host port 3100 (3000 tends to collide with other local projects);
+      # the container still listens on 3000 internally.
+      - "3100:3000"
     environment:
       # Browser-side fetches (client components) hit the API published on the host.
       NEXT_PUBLIC_API_URL: http://localhost:8000

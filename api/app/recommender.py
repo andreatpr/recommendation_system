@@ -4,7 +4,6 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 from .model_loader import ModelState
-from .schemas import NewUserRecommendationItem
 
 def cf_score(state: ModelState, user_id: str, city: str) -> float:
     if user_id not in state.user_to_idx or city not in state.city_to_idx_cf:
@@ -65,78 +64,47 @@ def recommend_hybrid(
     return scored[:k]
 
 
-def recommend_popularity(state: ModelState, k: int = 10) -> list[tuple[str, float]]:
-    """Reimplements recommend_popularity from w10.ipynb (cell 41), ranking
-    cities by baseline_score."""
-    ranked = state.city_popularity[["city_clean", "baseline_score"]].sort_values(
-        "baseline_score", ascending=False
-    )
-    return [(row.city_clean, float(row.baseline_score)) for row in ranked.head(k).itertuples()]
-
-def recommend_new_user(
+def recommend_from_preferences(
     state: ModelState,
-    ratings: list[tuple[str, float]],
+    preferences: list[tuple[str, float]],
     k: int = 10,
-    w_content: float = 0.90,
-    w_pop: float = 0.10,
-) -> tuple[list[NewUserRecommendationItem], list[str], list[str]]:
+    w_content: float = 0.7,
+    w_pop: float = 0.3,
+) -> list[tuple[str, float]]:
     """
-    Recommend cities for a new user using a temporary content profile.
+    Content + cluster popularity recommendations for a brand-new user.
+    The profile is built as the weighted average of the rated cities'
+    PCA embeddings using weights = rating * log1p(n_reviews). The final
+    score combines cosine similarity with cluster-normalized popularity.
 
-    The profile is built from the weighted average of the PCA city embeddings
-    provided by the user. Since the user has no SVD latent factor, the score
-    combines content similarity and cluster popularity only.
+    Cities must be pre-validated against content_city_to_idx (the router owns
+    422s). Duplicate cities keep the last occurrence. Rated cities are excluded
+    from the results.
     """
+    prefs = dict(preferences)
 
-    valid_inputs: list[tuple[str, float]] = []
-    ignored_cities: list[str] = []
+    sel_idx = [state.content_city_to_idx[c] for c in prefs]
+    ratings = np.array(list(prefs.values()), dtype=float)
+    n_reviews = np.array(
+    [
+        state.city_stats.get(c, {}).get("reviews", 1)
+        for c in prefs
+    ],
+    dtype=float,
+)
+    weights = ratings * np.log1p(n_reviews)
+    weights = weights / (weights.sum() + 1e-9)
+    profile = np.average(state.X_content[sel_idx], axis=0, weights=weights)
 
-    for city, rating in ratings:
-        city_clean = city.strip().lower()
-
-        if city_clean in state.content_city_to_idx:
-            valid_inputs.append((city_clean, rating))
-        else:
-            ignored_cities.append(city)
-
-    if not valid_inputs:
-        return [], [], ignored_cities
-
-    input_cities = [city for city, _ in valid_inputs]
-
-    vectors = []
-    weights = []
-
-    for city, rating in valid_inputs:
-        idx = state.content_city_to_idx[city]
-        vectors.append(state.X_content[idx])
-        weights.append(rating)
-
-    user_profile = np.average(
-        np.vstack(vectors),
-        axis=0,
-        weights=np.array(weights),
-    )
-
-    seen = set(input_cities)
-
-    candidates = [
-        city
-        for city in state.content_city_to_idx
-        if city not in seen
-    ]
-
+    candidates = [c for c in state.content_city_to_idx if c not in prefs]
     candidate_idx = [state.content_city_to_idx[c] for c in candidates]
-    candidate_matrix = state.X_content[candidate_idx]
-
     content_scores = cosine_similarity(
-        user_profile.reshape(1, -1),
-        candidate_matrix,
+        profile.reshape(1, -1), state.X_content[candidate_idx]
     ).flatten()
 
-    scored: list[NewUserRecommendationItem] = []
-
+    scored: list[tuple[str, float]] = []
     for city, content_s in zip(candidates, content_scores):
+
         cluster_id = state.city_cluster_map.get(city)
 
         pop_s = (
@@ -145,18 +113,24 @@ def recommend_new_user(
             .get(city, 0.0)
         )
 
-        score = (w_content * content_s) + (w_pop * pop_s)
-
         scored.append(
-            NewUserRecommendationItem(
-                city=city,
-                score=float(score),
-                content_score=float(content_s),
-                popularity_score=float(pop_s),
-                cluster=cluster_id,
+            (
+                city,
+                float(
+                    w_content * content_s +
+                    w_pop * pop_s
+                )
             )
         )
 
-    scored.sort(key=lambda item: item.score, reverse=True)
+    scored.sort(key=lambda pair: pair[1], reverse=True)
+    return scored[:k]
 
-    return scored[:k], input_cities, ignored_cities
+
+def recommend_popularity(state: ModelState, k: int = 10) -> list[tuple[str, float]]:
+    """Reimplements recommend_popularity from w10.ipynb (cell 41), ranking
+    cities by baseline_score."""
+    ranked = state.city_popularity[["city_clean", "baseline_score"]].sort_values(
+        "baseline_score", ascending=False
+    )
+    return [(row.city_clean, float(row.baseline_score)) for row in ranked.head(k).itertuples()]

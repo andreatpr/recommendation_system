@@ -1,23 +1,56 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from .. import recommender
-from ..schemas import (
-    CityScore,
-    RecommendationResponse,
-    NewUserRecommendationRequest,
-    NewUserRecommendationResponse,
-)
+
+from ..schemas import CityScore, PreferencesRequest, RecommendationResponse
 
 router = APIRouter(prefix="/recommendations")
 
 
 def _to_city_scores(state, results: list[tuple[str, float]]) -> list[CityScore]:
-    return [
-        CityScore(city=c, score=s, cluster=int(state.city_cluster_map.get(c, -1)))
-        for c, s in results
-    ]
+    scores = []
+    for c, s in results:
+        stats = state.city_stats.get(c, {})
+        scores.append(
+            CityScore(
+                city=c,
+                score=s,
+                cluster=int(state.city_cluster_map.get(c, -1)),
+                avg_rating=stats.get("avg_rating"),
+                reviewers=stats.get("reviewers"),
+                popularity=stats.get("popularity"),
+                badge=stats.get("badge"),
+            )
+        )
+    return scores
+
+
+@router.post("/preferences", response_model=RecommendationResponse)
+def post_preferences(request: Request, body: PreferencesRequest) -> RecommendationResponse:
+    state = request.app.state.model
+
+    prefs = [(p.city.strip().lower(), p.rating) for p in body.preferences]
+    invalid = sorted({c for c, _ in prefs if c not in state.content_city_to_idx})
+    if invalid:
+        raise HTTPException(
+            status_code=422, detail=f"Ciudades desconocidas: {', '.join(invalid)}"
+        )
+
+    results = recommender.recommend_from_preferences(
+        state,
+        prefs,
+        k=body.k,
+        w_content=body.w_content if body.w_content is not None else 0.7,
+        w_pop=body.w_pop if body.w_pop is not None else 0.3,
+    )
+    return RecommendationResponse(
+        user_id="",
+        method="preferences",
+        is_cold_start=False,
+        recommendations=_to_city_scores(state, results),
+    )
 
 
 @router.get("/popularity", response_model=RecommendationResponse)
@@ -63,36 +96,4 @@ def get_recommendations(
         method="popularity",
         is_cold_start=True,
         recommendations=_to_city_scores(state, fallback),
-    )
-
-@router.post(
-    "/new-user",
-    response_model=NewUserRecommendationResponse,
-)
-def get_new_user_recommendations(
-    request: Request,
-    body: NewUserRecommendationRequest,
-) -> NewUserRecommendationResponse:
-
-    state = request.app.state.model
-
-    ratings = [
-        (item.city, item.rating)
-        for item in body.ratings
-    ]
-
-    recommendations, input_cities, ignored_cities = (
-        recommender.recommend_new_user(
-            state,
-            ratings,
-            k=body.k,
-        )
-    )
-
-    return NewUserRecommendationResponse(
-        method="content-popularity",
-        is_cold_start=True,
-        input_cities=input_cities,
-        ignored_cities=ignored_cities,
-        recommendations=recommendations,
     )

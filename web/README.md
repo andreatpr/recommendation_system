@@ -1,8 +1,10 @@
 # City Discovery Engine — Web UI
 
 Next.js (App Router + TypeScript + Tailwind) frontend for the recommendation API in `../api/`.
-Lets you pick a known user (or type any id to demo the cold-start fallback), compare hybrid vs
-popularity rankings side by side, tweak the hybrid weights, and browse the city catalog by cluster.
+Main flow: pick 3-5 cities you know, rate them with stars, and get personalized recommendations
+compared against the popularity baseline. A secondary academic demo mode keeps the original
+dataset-user picker (full hybrid CF + cold-start fallback). Catalog browsing by cluster with
+enriched city cards.
 
 ## Environment variables
 
@@ -13,6 +15,8 @@ popularity rankings side by side, tweak the hybrid weights, and browse the city 
 
 In `docker-compose.yml` these are already wired: the browser hits the API published on the host
 (`http://localhost:8000`), while server components use the internal hostname (`http://api:8000`).
+The compose setup publishes the web app on host port **3100** (http://localhost:3100), since
+3000 tends to collide with other local projects; `npm run dev` still uses 3000.
 
 ## Run in development
 
@@ -45,5 +49,14 @@ Or just use the compose setup from the repo root: `docker compose up --build`.
 
 ## Pages
 
-- `/` — user picker, weight controls, hybrid vs popularity comparison, cold-start banner
-- `/catalog` — city catalog with per-cluster filter (`?cluster=N`)
+- `/` — two modes via tabs:
+  - **Tus gustos** (default): autocomplete over the 213-city catalog, star ratings per city,
+    `POST /recommendations/preferences`, personalized-vs-popularity comparison.
+  - **Modo demo académico**: original user_id picker + weight sliders (full hybrid model,
+    cold-start banner for unknown ids).
+- `/catalog` — city catalog with per-cluster filter (`?cluster=N`), enriched cards
+  (avg rating stars, reviewer counts, "Popular"/"Joya oculta" badges)
+
+Key components: `PreferencePicker` (autocomplete + star ratings), `StarRating` (shared,
+interactive and read-only fractional), `CityCard`/`RecommendationComparison` (enriched cards
+with per-column relative score bars), `SkeletonCard` (loading states).

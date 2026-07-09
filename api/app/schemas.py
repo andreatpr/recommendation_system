@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -42,6 +45,10 @@ class CityScore(BaseModel):
     city: str
     score: float
     cluster: int
+    avg_rating: float | None = None
+    reviewers: int | None = None
+    popularity: float | None = None
+    badge: Literal["popular", "hidden_gem"] | None = None
 
 
 class RecommendationResponse(BaseModel):
@@ -51,9 +58,25 @@ class RecommendationResponse(BaseModel):
     recommendations: list[CityScore]
 
 
+class PreferenceItem(BaseModel):
+    city: str
+    rating: float = Field(ge=1, le=5)
+
+
+class PreferencesRequest(BaseModel):
+    preferences: list[PreferenceItem] = Field(min_length=1, max_length=20)
+    k: int = Field(10, ge=1, le=213)
+    w_content: float | None = Field(None, ge=0, le=1)
+    w_pop: float | None = Field(None, ge=0, le=1)
+
+
 class CityInfo(BaseModel):
     city: str
     cluster: int
+    avg_rating: float | None = None
+    reviewers: int | None = None
+    popularity: float | None = None
+    badge: Literal["popular", "hidden_gem"] | None = None
 
 
 class CityListResponse(BaseModel):
@@ -63,29 +86,3 @@ class CityListResponse(BaseModel):
 
 class SampleUsersResponse(BaseModel):
     user_ids: list[str]
-
-
-class NewUserRating(BaseModel):
-    city: str
-    rating: float = Field(ge=1.0, le=5.0)
-
-
-class NewUserRecommendationRequest(BaseModel):
-    ratings: list[NewUserRating]
-    k: int = Field(default=10, ge=1, le=50)
-
-
-class NewUserRecommendationItem(BaseModel):
-    city: str
-    score: float
-    content_score: float
-    popularity_score: float
-    cluster: int | None = None
-
-
-class NewUserRecommendationResponse(BaseModel):
-    method: str
-    is_cold_start: bool
-    input_cities: list[str]
-    ignored_cities: list[str]
-    recommendations: list[NewUserRecommendationItem]

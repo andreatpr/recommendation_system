@@ -57,6 +57,7 @@ class ModelState:
     cluster_popularity: dict[int, dict[str, float]] = field(default_factory=dict)
     cf_min: float = 0.0
     cf_max: float = 1.0
+    city_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def load_model_state(path: Path = DEFAULT_MODEL_PATH) -> ModelState:
@@ -104,8 +105,46 @@ def load_model_state(path: Path = DEFAULT_MODEL_PATH) -> ModelState:
         state.city_cluster_map
     )
     state.cf_min, state.cf_max = _derive_cf_bounds(state.user_factors, state.item_factors)
+    state.city_stats = _derive_city_stats(state.city_popularity)
 
     return state
+
+
+def _derive_city_stats(city_popularity: pd.DataFrame) -> dict[str, dict[str, Any]]:
+    """Per-city display/scoring stats derived once at startup.
+
+    popularity is baseline_score min-max normalized globally (not per cluster):
+    the preferences endpoint blends it with a single cross-cluster cosine score,
+    so the two terms must share one scale. Badges: "popular" when the city's
+    reviewer count is in the top quartile; "hidden_gem" when its avg rating is
+    top-quartile but its reviewer count bottom-quartile (the thresholds make the
+    two mutually exclusive).
+    """
+    users = city_popularity["train_users"].to_numpy(dtype=float)
+    ratings = city_popularity["train_avg_rating"].to_numpy(dtype=float)
+    baseline = city_popularity["baseline_score"].to_numpy(dtype=float)
+
+    users_p75 = np.percentile(users, 75)
+    users_p25 = np.percentile(users, 25)
+    rating_p75 = np.percentile(ratings, 75)
+    lo, hi = baseline.min(), baseline.max()
+
+    stats: dict[str, dict[str, Any]] = {}
+    for row in city_popularity.itertuples(index=False):
+        if row.train_users >= users_p75:
+            badge = "popular"
+        elif row.train_avg_rating >= rating_p75 and row.train_users <= users_p25:
+            badge = "hidden_gem"
+        else:
+            badge = None
+        stats[row.city_clean] = {
+            "avg_rating": float(row.train_avg_rating),
+            "reviewers": int(row.train_users),
+            "reviews": int(row.train_reviews),
+            "popularity": float((row.baseline_score - lo) / (hi - lo + 1e-9)),
+            "badge": badge,
+        }
+    return stats
 
 
 def _derive_cluster_popularity(

@@ -15,7 +15,7 @@ The API supports two recommendation modes:
 
 ---
 
-## Run with Docker only
+## Run with Docker
 
 Build and start the complete application (API + frontend):
 
@@ -27,7 +27,7 @@ Once the containers are running:
 
 - **Swagger UI:** http://localhost:8000/docs
 - **API:** http://localhost:8000
-- **Frontend:** http://localhost:3000
+- **Frontend:** http://localhost:3100
 
 To stop the services:
 
@@ -47,7 +47,7 @@ docker compose run --rm api pytest
 
 Expected output:
 
-```
+```text
 12 passed
 ```
 
@@ -59,11 +59,23 @@ Expected output:
 |--------|------|-------------|
 | GET | `/health` | Checks service availability and verifies that the recommendation model has been successfully loaded. |
 | GET | `/model-info` | Returns model configuration, hybrid weights, evaluation metrics, and data-quality information. |
-| GET | `/recommendations/{user_id}` | Returns hybrid recommendations for users present in the training interaction matrix. |
-| POST | `/recommendations/new-user` | Generates recommendations for new users from a list of rated cities using a temporary content profile and cluster popularity. |
+| GET | `/recommendations/{user_id}` | Returns hybrid recommendations for users in the training set. Unknown users automatically receive the popularity-based fallback. |
+| POST | `/recommendations/preferences` | Generates recommendations for a new user from a list of `(city, rating)` preferences. |
 | GET | `/recommendations/popularity` | Returns the popularity-based baseline ranking. |
 | GET | `/cities` | Returns the city catalog, optionally filtered by cluster. |
 | GET | `/users/sample` | Returns sample user identifiers available for testing. |
+
+City objects returned by `/cities` and recommendation responses include the following metadata:
+
+- `avg_rating`
+- `reviewers`
+- `popularity`
+- `badge`
+
+where `badge` is:
+
+- `"popular"`: city belongs to the top reviewer quartile.
+- `"hidden_gem"`: city has a high average rating but relatively few reviewers.
 
 ---
 
@@ -78,8 +90,13 @@ Recommendations follow the hybrid scoring function:
 - **Cluster Popularity (10%)**
 
 The API reproduces the recommendation pipeline implemented in
-`notebooks/w10.ipynb`, including exclusion of cities already present in the
-user's training history (`w10_train_uc.parquet`).
+`notebooks/w10.ipynb`.
+
+Candidate cities are filtered using the original training interactions stored in
+`w10_train_uc.parquet`, preventing recommendations of cities already present in
+the user's training history.
+
+---
 
 ### New users (Cold Start)
 
@@ -88,19 +105,51 @@ collaborative filtering cannot be computed.
 
 Instead, the API:
 
-1. Builds a temporary user profile as the rating-weighted average of the PCA city embeddings.
-2. Computes cosine similarity between this profile and every unseen city.
-3. Combines content similarity with normalized cluster popularity.
-4. Returns the Top-K ranked recommendations.
+1. Builds a temporary user profile as the weighted average of the rated cities'
+   PCA embeddings.
+2. Uses weights equal to:
+
+   ```
+   rating × log1p(n_reviews)
+   ```
+
+   matching the cold-start strategy implemented in `w10.ipynb`.
+
+3. Computes cosine similarity between the temporary profile and every unseen
+   candidate city.
+4. Combines the content similarity score with cluster-normalized popularity,
+   reconstructed from `w10_user_city_f.parquet`.
+5. Returns the Top-K ranked recommendations.
 
 The default scoring function is:
 
-- **Content Similarity (90%)**
-- **Cluster Popularity (10%)**
+- **Content Similarity (70%)**
+- **Cluster Popularity (30%)**
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/recommendations/preferences \
+  -H "Content-Type: application/json" \
+  -d '{
+    "preferences": [
+      {"city":"west chester","rating":5},
+      {"city":"exton","rating":4}
+    ],
+    "k":10
+  }'
+```
+
+Valid city names can be obtained from:
+
+```
+GET /cities
+```
 
 ---
 
-## Current limitations/notes
+## Current limitations
 
+- The recommendation model is pre-trained and performs inference only; it is not updated online.
 - Recommendations for new users do not use collaborative filtering because no latent user representation exists before interaction history is collected.
-- The temporary profile created for new users exists only during the request and is not persisted. Consequently, subsequent requests do not accumulate user history.
+- The temporary profile created for new users exists only during the current request and is not persisted for future sessions.

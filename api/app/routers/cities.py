@@ -15,7 +15,17 @@ def get_cities(request: Request, cluster: int | None = Query(None)) -> CityListR
     if cluster is not None:
         cities = [c for c in cities if state.city_cluster_map.get(c) == cluster]
 
-    infos = [
-        CityInfo(city=c, cluster=int(state.city_cluster_map[c])) for c in sorted(cities)
-    ]
+    infos = []
+    for c in sorted(cities):
+        stats = state.city_stats.get(c, {})
+        infos.append(
+            CityInfo(
+                city=c,
+                cluster=int(state.city_cluster_map[c]),
+                avg_rating=stats.get("avg_rating"),
+                reviewers=stats.get("reviewers"),
+                popularity=stats.get("popularity"),
+                badge=stats.get("badge"),
+            )
+        )
     return CityListResponse(total=len(infos), cities=infos)

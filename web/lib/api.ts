@@ -18,6 +18,32 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError(`No se pudo conectar con la API en ${API_URL}`);
+  }
+  if (!response.ok) {
+    // Surface FastAPI's detail (e.g. "Ciudades desconocidas: ...") when present.
+    let detail: string | undefined;
+    try {
+      const data = await response.json();
+      if (typeof data?.detail === "string") detail = data.detail;
+    } catch {
+      // non-JSON error body; fall through to the generic message
+    }
+    throw new ApiError(detail ?? `La API respondió ${response.status} para ${path}`);
+  }
+  return response.json() as Promise<T>;
+}
+
 export interface HealthResponse {
   status: string;
   model_loaded: boolean;
@@ -55,15 +81,21 @@ export interface ModelInfoResponse {
   };
 }
 
+export type CityBadge = "popular" | "hidden_gem" | null;
+
 export interface CityScore {
   city: string;
   score: number;
   cluster: number;
+  avg_rating: number | null;
+  reviewers: number | null;
+  popularity: number | null;
+  badge: CityBadge;
 }
 
 export interface RecommendationResponse {
   user_id: string;
-  method: "hybrid" | "popularity";
+  method: "hybrid" | "popularity" | "preferences";
   is_cold_start: boolean;
   recommendations: CityScore[];
 }
@@ -71,6 +103,15 @@ export interface RecommendationResponse {
 export interface CityInfo {
   city: string;
   cluster: number;
+  avg_rating: number | null;
+  reviewers: number | null;
+  popularity: number | null;
+  badge: CityBadge;
+}
+
+export interface PreferenceItem {
+  city: string;
+  rating: number;
 }
 
 export interface CityListResponse {
@@ -131,49 +172,12 @@ export function getCities(cluster?: number): Promise<CityListResponse> {
   return getJson<CityListResponse>(`/cities${buildQuery({ cluster })}`);
 }
 
-export type NewUserRating = {
-  city: string;
-  rating: number;
-};
-
-export type NewUserRecommendationItem = {
-  city: string;
-  score: number;
-  content_score: number;
-  popularity_score: number;
-  cluster: number | null;
-};
-
-export type NewUserRecommendationResponse = {
-  method: string;
-  is_cold_start: boolean;
-  input_cities: string[];
-  ignored_cities: string[];
-  recommendations: NewUserRecommendationItem[];
-};
-
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    throw new ApiError(`La API respondió ${res.status} para ${path}`);
-  }
-
-  return res.json();
-}
-
-export function getNewUserRecommendations(
-  ratings: NewUserRating[],
+export function postPreferences(
+  preferences: PreferenceItem[],
   k = 10
-): Promise<NewUserRecommendationResponse> {
-  return postJson<NewUserRecommendationResponse>("/recommendations/new-user", {
-    ratings,
+): Promise<RecommendationResponse> {
+  return postJson<RecommendationResponse>("/recommendations/preferences", {
+    preferences,
     k,
   });
 }

@@ -22,5 +22,5 @@ def test_model_info_shape(client: TestClient) -> None:
     assert metrics["hybrid"]["recall"] > metrics["baseline_popularity"]["recall"]
 
     data_quality = body["data_quality"]
-    assert data_quality["cluster_popularity_source"] == "approximate"
-    assert data_quality["seen_exclusion_available"] is False
+    assert data_quality["cluster_popularity_source"] == "w10_user_city_f.parquet"
+    assert data_quality["seen_exclusion_available"] is True

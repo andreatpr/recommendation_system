@@ -48,7 +48,7 @@ docker compose run --rm api pytest
 Expected output:
 
 ```text
-12 passed
+25 passed
 ```
 
 ---

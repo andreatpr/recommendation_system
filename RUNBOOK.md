@@ -22,11 +22,16 @@ recommendation_system/
 │
 ├── reports/
 │
+├── api/
+│
+├── web/
+│
 ├── requirements.txt
 │
 ├── README.md
 │
 └── RUNBOOK.md
+├── docker files
 ```
 
 ---

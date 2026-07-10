@@ -19,7 +19,7 @@ notebooks/
   week12.ipynb             ← graph analytics and centrality (Week 13)
 api/            ← FastAPI backend serving hybrid_artifacts.pkl, with Swagger docs and tests
 web/            ← Next.js frontend to try the recommender interactively
-reports/        ← graded assignment reports (Weeks 3, 5, 7, 11, 13)
+reports/        ← graded assignment reports (Weeks 3, 5, 7, 11, 13 and Final Report (week 15))
 docker-compose.yml
 requirements.txt   ← notebook/training environment
 README.md
@@ -112,8 +112,7 @@ fallback: the API automatically returns a popularity-based ranking (`method: "po
    - Same endpoint with a made-up id (e.g. `test-123`) → `method: "popularity"`,
      `is_cold_start: true`.
    - `GET /model-info` → hybrid weights, reported metrics (Recall@4: 12.8% baseline → 52.1%
-     hybrid) and `data_quality` flags (documents the approximations used where the original
-     `w11/` training artifacts aren't resolvable in this repo — see `api/README.md`).
+     hybrid) and `data_quality` flags.
 4. **Automated tests**:
 
    ```bash

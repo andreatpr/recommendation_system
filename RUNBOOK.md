@@ -2,7 +2,7 @@
 
 ## Overview
 
-This runbook describes how to reproduce the complete recommendation system, generate all intermediate artifacts, and obtain final city recommendations.
+This runbook describes how to reproduce the complete recommendation system, generate all intermediate artifacts, and obtain final city recommendations (week 3, 5, 7, 10, 12) not the mvp of week 15, for the mvp please refer to the other READMEs in the whole repo.
 
 ---
 
